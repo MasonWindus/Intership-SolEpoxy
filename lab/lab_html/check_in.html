@@ -1,0 +1,43 @@
+<html>
+<head>
+<!--meta tag used to make page compatible with tablet screen-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check In</title>
+<link rel="stylesheet" type="text/css" href="../lab_css/lab.css">
+<style>
+#hiddenInputField {
+	position: absolute;
+	top: -100px;
+}
+
+#hiddenmenu {
+	height: 15px;
+	width: 5px;
+	background-color: white;
+	color: white;
+	border: none;
+}
+
+</style>
+<script src="../../config/jquery-3.3.1.min.js"></script>
+<script src="../lab_js/check_in.js"></script>
+</head>
+<body>
+	<div id='titletext'>Scan sample to check in</div><br>
+		<!--The 'hiddenmenu' button is a button to go back to the menu with, its white on white so its invisible to the operators-->
+		<button id='hiddenmenu' onclick = 'window.location.replace("menu.html")'></button>
+	<div class = 'center'><button id = 'menu' disabled></button></div><br><br><br>
+	
+	<!--The 'hidden' input field is pushed up off the screen, it is automatically focused on to capture scanner information-->
+	<input type='text' id='hiddenInputField' onfocusout="refocus()" autofocus>
+	<table class='checked'>
+		<tr>
+			<th colspan='2'>Previously Checked In Samples</th>
+		</tr>
+		<tr>
+			<th>Batch Number</th>
+			<th>Sample Number</th>
+		</tr>
+	</table>
+</body>
+</html>

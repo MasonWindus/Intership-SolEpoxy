@@ -1,0 +1,46 @@
+#titletext{
+	width: 100%;
+	padding: 25px 0px 25px 0px;
+	background-color: white;
+	color: black;
+	text-align: center;
+	font-size: 40;
+}
+
+button{
+	width: 90%;
+	height: 15%;
+	background-color: green;
+	color: white;
+	margin: auto;
+	text-align: center;
+	font-size: 32;
+}
+
+tr {
+	border: 3px solid black;
+	border-collapse: collapse;
+}
+
+td {
+	border: 3px solid black;
+	border-collapse: collapse;
+	text-align: center;
+}
+
+th {
+	border: 3px solid black;
+	border-collapse: collapse;
+	width: 50%;
+}
+
+.center {
+	text-align: center;
+	margin: 10px;
+}
+
+.checked {
+	width : 100%;
+	border: 3px solid black;
+	border-collapse: collapse;
+}

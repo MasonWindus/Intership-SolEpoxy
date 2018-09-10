@@ -1,0 +1,326 @@
+<html>
+<head>
+<title>Retains Status Display</title>
+<style>
+table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+td, th{
+	border: 2px solid #000000;
+	text-align: left;
+	padding: 8px;
+}
+
+.status0{
+	background-color: #555555;
+	color: white;
+}
+
+.status1{
+	background-color: #0000ff;
+	color: white;
+}
+
+.status2{
+	background-color: #00ff00;
+	color: black;
+}
+
+.status3{
+	background-color: #ff0000;
+	color: white;
+}
+
+.statusError{
+	background-color: #ff00ff;
+	color: black;
+}
+
+.product_name {
+	width: 15%;
+}
+
+.batch_number {
+	width: 15%;
+}
+
+.bin_number {
+	width: 10%;
+}
+
+.operator_ID {
+	width: 10%;
+}
+
+.machine_number {
+	width: 15%;
+}
+
+.sample_number {
+	width: 15%;
+}
+
+.status {
+	width: 20%;
+}
+</style>
+<script src="../config/jquery-3.3.1.min.js"></script>
+<script>
+//.ready used to make sure functions don't run before page has completely loaded to avoid attempting to access non-existant page elements
+$(document).ready(function(){
+	//Calls draw table to start page, then sets it to run every 10 minutes
+	draw_table();
+	setInterval(draw_table, 600000);
+
+	//Sets update_status and update_table to run every minute
+	setInterval(update_table, 1000);
+	setInterval(update_status, 1000);
+});
+
+function draw_table(){
+//Function called to draw table from scratch, used to update table completely every 10 minutes and to draw on pageload
+
+	//Open http request object
+	var xmlhttp;
+	var table;
+	
+	//if statement used to allow compatibility with previous versions of internet explorer
+	if(window.XMLHttpRequest){
+		xmlhttp = new XMLHttpRequest();
+	} else {
+		xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+	}
+	
+	//Function to run only when server responds with valid data
+	xmlhttp.onreadystatechange = function(){
+		//readyState == 4 means the request has been sent to the server and the server has finished responding
+		//status == 200 means the request was successfully completed
+		if(this.readyState == 4 && this.status == 200){
+		
+			//Page written to turn red if request fails, so turn back to white if request succeeds
+			document.body.style.backgroundColor = "white";
+		
+			//PHP is written to respond with valid JSON, containing all database entries younger than 7 days old in descending chronological order
+			var records = JSON.parse(this.responseText);
+			
+			//Starts string with table tag, will add row by row in the for loop
+			table = "<table id='table'><tbody id='tbody'>";
+			
+			for(var i = 0; i < records.length; i++){
+			
+				var record = records[i];
+				
+				//statuscell is used to hold the html for the status cell of each row, because the html changes depending on qa_status
+				var statusCell;
+				
+				//statusclass hold the class that the entire row will take on, because this class changes based on qa_status
+				var statusClass;
+				
+				//Sets statuscell and statusclass based on qa_status
+				if(record['qa_status'] == '0'){
+					statusCell = "Sample Not Yet Checked In";
+					statusClass = "status0";
+				} else if(record['qa_status'] == '1'){
+					statusCell = "Sample Being Tested";
+					statusClass = "status1";
+				} else if(record['qa_status'] == '2'){
+					statusCell = "Sample Passed";
+					statusClass = "status2";
+				} else if(record['qa_status'] == '3'){
+					statusCell = "Sample Failed";
+					statusClass = "status3";
+				} else {
+					statusCell = "Error";
+					statusClass = "statusError"
+				}
+				
+				//Each row can be accessed through this ID, allowing JQuery to be utilized throughout the page
+				var rowID = record['batch_number'] + "_" + record['sample_number']; 
+				
+				//Adds record to table with statusClass inserted to assign the class to the row and statusCell to give the status column the correct text
+				table += "<tr class='" + statusClass + "' id='" + rowID + "'><td class='product_name'>" + record['product_name'] 
+				+ "</td><td class='batch_number'>" + record['batch_number'] 
+				+ "</td><td class='bin_number'>" + record['bin_number'] 
+				+ "</td><td class='operator_ID'>" + record['operator_ID'] 
+				+ "</td><td class='machine_number'>" + record['machine_number'] 
+				+ "</td><td class='sample_number'>" + record['sample_number'] 
+				+ "</td><td class='status'>" + statusCell + "</td></tr>";
+			}
+			
+			//Finish the table string with ending table tag and write it to the screen
+			table += "</tbody></table>";
+			document.getElementById("update").innerHTML = table;
+		}
+		
+	}
+	xmlhttp.onerror = function() {
+		//Turn background red if request fails to let operators know to see IT
+		document.body.style.backgroundColor = "red";
+	}
+	xmlhttp.open("GET", "updatetable.php?location=packaging", true);
+	xmlhttp.send();
+}
+
+function update_table(){
+//Function used to update the top row of the table in the case of a new sample being added
+
+	var xmlhttp;
+	var newRow;
+	
+	//if statement used to allow compatibility with previous versions of internet explorer
+	if(window.XMLHttpRequest){
+		xmlhttp = new XMLHttpRequest();
+	} else {
+		xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+	}
+	
+	//Function to run only when server responds with valid data
+	xmlhttp.onreadystatechange = function(){
+		//readyState == 4 means the request has been sent to the server and the server has finished responding
+		//status == 200 means the request was successfully completed
+		if(this.readyState == 4 && this.status == 200){
+		
+			//Page written to turn red if request fails, so turn back to white if request succeeds
+			document.body.style.backgroundColor = "white";
+		
+			//PHP written to respond with valid JSON containing all database records younger than 7 days old
+			var records = JSON.parse(this.responseText);
+			
+			//The first record in the array is the youngest record, the ID of this record will be compared to the ID of the
+			//current top row of the table to determine if a new record has been added
+			var youngestRecord = records[0];
+			
+			//Generate ID of youngestRecord to compare to the ID of the current top row of the table
+			var youngestRecordID = youngestRecord['batch_number'] + "_" + youngestRecord['sample_number'];
+			
+			//Get ID of current top row of table, .children used twice because rows are actually added to
+			//a tbody container on the DOM, so the hierarchy goes <table> -> <tbody> -> <tr>
+			var currentTopRowID = $("#table").children(":first").children(":first").attr("id");
+			
+			//If lastrow and currentTopRowID are not the same, test further to see if just at statuschange or entirely new sample
+			if(youngestRecordID != currentTopRowID){
+				//newRowClass holds the class the whole row will take, newRowStatusCell holds the html for the status cell
+				var newRowClass;
+				var newRowStatusCell;
+				
+				//Set newRowClass and newRowStatusCell depending on qa_status
+				if(youngestRecord.qa_status == '0'){
+					newRowStatusCell = "Sample Not Yet Checked In";
+					newRowClass = "status0";
+				} else if(youngestRecord.qa_status == '1'){
+					newRowStatusCell = "Sample Being Tested";
+					newRowClass = "status1";
+				} else if(youngestRecord.qa_status == '2'){
+					newRowStatusCell = "Sample Passed";
+					newRowClass = "status2";
+				} else if(youngestRecord.qa_status == '3'){
+					newRowStatusCell = "Sample Failed";
+					newRowClass = "status3";
+				} else {
+					newRowStatusCell = "Error";
+					newRowClass = "statusError";
+				}
+				
+				//Formulate the row to be added to the table
+				var newRow = "<tr id='" + youngestRecordID + "' class='" + newRowClass 
+				+ "'><td class='product_name'>" + youngestRecord.product_name 
+				+ "</td><td class='batch_number'>" + youngestRecord.batch_number 
+				+ "</td><td class='bin_number'>" + youngestRecord.bin_number 
+				+ "</td><td class='operator_ID'>" + youngestRecord.operator_ID 
+				+ "</td><td class='machine_number'>" + youngestRecord.machine_number 
+				+ "</td><td class='sample_number'>" + youngestRecord.sample_number 
+				+ "</td><td class='status'>" + newRowStatusCell + "</td></tr>";
+				
+				//Add row above current rows, below headers
+				$("#tbody").prepend(newRow);
+			
+			}
+		}
+	}
+	xmlhttp.onerror = function() {
+		//Turn background red if request fails to let operators know to see IT
+		document.body.style.backgroundColor = "red";
+	}
+	xmlhttp.open("GET", "updatetable.php?location=packaging", true);
+	xmlhttp.send();
+}
+
+function update_status(){
+//Function used to update the status cells of all rows dynamically without reloading entire table
+
+	var xmlhttp;
+	if(window.XMLHttpRequest){
+		xmlhttp = new XMLHttpRequest();
+	} else {
+		xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+	}
+	xmlhttp.onreadystatechange = function() {
+		//readyState == 4 means the request has been sent to the server and the server has finished responding
+		//status == 200 means the request was successfully completed
+		if(this.readyState == 4 && this.status == 200){
+		
+			//Page written to turn red if request fails, so turn back to white if request succeeds
+			document.body.style.backgroundColor = "white";
+			
+			//PHP written to respond with valid JSON
+			var records = JSON.parse(this.responseText);
+			for(var i = 0; i < records.length; i++){
+				var record = records[i];
+				
+				//Formulate ID of record to look up row in table
+				var rowID = record['batch_number'] + "_" + record['sample_number'];
+				
+				//newClass holds the class the entire row will take and innerText holds the text displayed in the status cell
+				var newClass;
+				var innerText;
+				
+				//Set newClass and innerText according to qa_status
+				if(record['qa_status'] == '0'){
+					newClass = "status0";
+					innerText = "Sample Not Yet Checked In";
+				} else if(record['qa_status'] == '1'){
+					newClass = "status1";
+					innerText = "Sample Being Tested";
+				} else if(record['qa_status'] == '2'){
+					newClass = "status2"
+					innerText = "Sample Passed";
+				} else if(record['qa_status'] == '3'){
+					newClass = "status3";
+					innerText = "Sample Failed";
+				} else {
+					newClass = "statusError";
+					innerText = "Error"
+				}
+				
+				//Set class of row and text in status cell
+				$("#" + rowID).attr("class", newClass);
+				$("#" + rowID).children(":last").text(innerText);
+			}
+		}
+	}
+	xmlhttp.onerror = function() {
+		//Turn background red if request fails to let operators know to see IT
+		document.body.style.backgroundColor = "red";
+	}
+	xmlhttp.open("GET", "updatefinished.php", true);
+	xmlhttp.send();
+}
+</script>
+</head>
+<body>
+<table id='header'>
+	<tr> 
+		<th class='product_name'>Product Name</th> 
+		<th class='batch_number'>Batch Number</th> 
+		<th class='bin_number'>Bin Number</th> 
+		<th class='operator_class'>Operator</th> 
+		<th class='machine_number'>Machine Number</th> 
+		<th class='sample_number'>Sample Number</th> 
+		<th class='status'>Status</th> 
+	</tr>
+</table>
+<div id="update"></div>
+</body>
+</html>
